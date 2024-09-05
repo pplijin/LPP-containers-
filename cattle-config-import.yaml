@@ -1,0 +1,70 @@
+aksClusterConfig:
+  imported: true
+  nodePools:
+  - availabilityZones:
+    - "1"
+    - "2"
+    - "3"
+    count: 1
+    enableAutoScaling: false
+    maxPods: 110
+    mode: System
+    name: agentpool
+    osDiskSizeGB: 128
+    osDiskType: Managed
+    osType: Linux
+    vmSize: Standard_DS2_v2
+  resourceGroup: ""
+  resourceLocation: centralindia
+awsCredentials:
+azureCredentials:
+  environment: AzurePublicCloud
+eksClusterConfig:
+  imported: true
+  nodeGroups:
+  - desiredSize: 1
+    diskSize: 20
+    ec2SshKey: ""
+    gpu: false
+    imageId: ""
+    instanceType: t3.large
+    labels: {}
+    maxSize: 1
+    minSize: 1
+    nodeRole: ""
+    nodegroupName: test1
+    requestSpotInstances: false
+    resourceTags: {}
+    spotInstanceTypes: []
+    subnets: []
+    tags: {}
+    userData: ""
+  region: ap-south-1
+gkeClusterConfig:
+  projectID: <project>
+  zone: asia-south2-c
+  imported: true
+  nodePools:
+  - autoscaling: {}
+    config:
+      diskSizeGb: 100
+      diskType: pd-standard
+      imageType: COS_CONTAINERD
+      machineType: n1-standard-2
+      oauthScopes:
+      - https://www.googleapis.com/auth/devstorage.read_only
+      - https://www.googleapis.com/auth/logging.write
+      - https://www.googleapis.com/auth/monitoring
+      - https://www.googleapis.com/auth/servicecontrol
+      - https://www.googleapis.com/auth/service.management.readonly
+      - https://www.googleapis.com/auth/trace.append
+    initialNodeCount: 1
+    management:
+      autoRepair: true
+      autoUpgrade: true
+    maxPodsConstraint: 110
+    version: 1.27.3-gke.100
+googleCredentials:
+rancher:
+  cleanup: false
+  insecure: true
