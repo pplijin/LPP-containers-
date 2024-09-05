@@ -1,0 +1,50 @@
+# This workflow calls the main workflow with custom variables
+name: GKE-E2E
+
+on:
+  workflow_dispatch: # Allow running manually on demand
+    inputs:
+      rancher_version:
+        description: Rancher version to deploy
+        required: true
+        type: string
+        default: 2.8-head
+      k3s_version:
+        description: k3s version of local cluster
+        required: true
+        type: string
+        default: v1.26.10+k3s1
+      run_p0_provisioning_tests:
+        required: true
+        default: true
+        type: boolean
+      run_p0_importing_tests:
+        required: true
+        default: true
+        type: boolean
+      run_support_matrix_provisioning_tests:
+        required: true
+        default: false
+        type: boolean
+      run_support_matrix_importing_tests:
+        required: true
+        default: false
+        type: boolean
+      destroy_runner:
+        description: Destroy the auto-generated self-hosted runner
+        default: true
+        type: boolean
+
+jobs:
+  gke-e2e:
+    uses: ./.github/workflows/main.yaml
+    secrets: inherit
+    with:
+      hosted_provider: gke
+      rancher_version: ${{ inputs.rancher_version }}
+      k3s_version: ${{ inputs.k3s_version }}
+      run_p0_provisioning_tests: ${{ inputs.run_p0_provisioning_tests == true }}
+      run_p0_importing_tests: ${{ inputs.run_p0_imorting_tests == true }}
+      run_support_matrix_provisioning_tests: ${{ inputs.run_support_matrix_provisioning_tests == true }}
+      run_support_matrix_importing_tests: ${{ inputs.run_support_matrix_importing_tests == true }}
+      destroy_runner: ${{ inputs.destroy_runner == true }}

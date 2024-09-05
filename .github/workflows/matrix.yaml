@@ -1,0 +1,11 @@
+on:
+  workflow_dispatch: # Allow running manually on demand
+
+jobs:
+  ReuseableMatrixJobForDeployment:
+    strategy:
+      matrix:
+        hosted_provider: [gke, eks, aks]
+    uses: ./.github/workflows/main.yaml
+    with:
+      hosted_provider: ${{ matrix.hosted_provider }}

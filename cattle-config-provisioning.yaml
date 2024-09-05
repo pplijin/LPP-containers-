@@ -1,0 +1,128 @@
+aksClusterConfig:
+  azureCredentialSecret: ""
+  dnsPrefix: ""
+  kubernetesVersion: 1.26.6
+  linuxAdminUsername: azureuser
+  loadBalancerSku: Standard
+  networkPlugin: kubenet
+  nodePools:
+  - availabilityZones:
+    - "1"
+    - "2"
+    - "3"
+    enableAutoScaling: false
+    maxPods: 110
+    mode: System
+    name: agentpool
+    nodeCount: 1
+    osDiskSizeGB: 128
+    osDiskType: Managed
+    osType: Linux
+    vmSize: Standard_DS2_v2
+  privateCluster: false
+  resourceGroup: ""
+  resourceLocation: eastus
+  tags: {}
+awsCredentials:
+azureCredentials:
+  environment: AzurePublicCloud
+eksClusterConfig:
+  kmsKey: ""
+  kubernetesVersion: "1.26"
+  loggingTypes: []
+  nodeGroups:
+  - desiredSize: 1
+    diskSize: 20
+    ec2SshKey: ""
+    gpu: false
+    imageId: ""
+    instanceType: t3.large
+    labels: {}
+    maxSize: 1
+    minSize: 1
+    nodeRole: ""
+    nodegroupName: test1
+    requestSpotInstances: false
+    resourceTags: {}
+    spotInstanceTypes: []
+    subnets: []
+    tags: {}
+    userData: ""
+  privateAccess: false
+  publicAccess: true
+  publicAccessSources: []
+  region: us-east-2
+  secretsEncryption: false
+  securityGroups: []
+  serviceRole: ""
+  subnets: []
+  tags: {}
+gkeClusterConfig:
+  clusterAddons:
+    horizontalPodAutoscaling: true
+    httpLoadBalancing: true
+    networkPolicyConfig: false
+  clusterIpv4Cidr: ""
+  enableKubernetesAlpha: false
+  ipAllocationPolicy:
+    clusterIpv4CidrBlock: ""
+    clusterSecondaryRangeName: ""
+    createSubnetwork: false
+    nodeIpv4CidrBlock: ""
+    servicesIpv4CidrBlock: ""
+    servicesSecondaryRangeName: ""
+    subnetworkName: ""
+    useIpAliases: true
+  kubernetesVersion: 1.27.4-gke.900
+  labels:
+    owner: hosted-provider-ci
+  locations: []
+  loggingService: logging.googleapis.com/kubernetes
+  maintenanceWindow: ""
+  masterAuthorizedNetworks:
+    cidrBlocks: []
+    enabled: false
+  monitoringService: monitoring.googleapis.com/kubernetes
+  network: default
+  networkPolicyEnabled: false
+  nodePools:
+  - autoscaling:
+      enabled: false
+      maxNodeCount: 0
+      minNodeCount: 0
+    config:
+      diskSizeGb: 50
+      diskType: pd-standard
+      imageType: COS_CONTAINERD
+      labels: {}
+      localSsdCount: 0
+      machineType: n1-standard-2
+      oauthScopes:
+      - https://www.googleapis.com/auth/devstorage.read_only
+      - https://www.googleapis.com/auth/logging.write
+      - https://www.googleapis.com/auth/monitoring
+      - https://www.googleapis.com/auth/servicecontrol
+      - https://www.googleapis.com/auth/service.management.readonly
+      - https://www.googleapis.com/auth/trace.append
+      preemptible: false
+      tags: []
+      taints: []
+    initialNodeCount: 1
+    management:
+      autoRepair: true
+      autoUpgrade: true
+    maxPodsConstraint: 110
+    name: default-pool
+    version: 1.27.4-gke.900
+  privateClusterConfig:
+    enablePrivateEndpoint: false
+    enablePrivateNodes: false
+    masterIpv4CidrBlock: ""
+  region: ""
+  subnetwork: default
+  zone: us-central1-c
+  projectID: <project>
+googleCredentials:
+rancher:
+  cleanup: false
+  insecure: true

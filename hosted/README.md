@@ -1,0 +1,176 @@
+# Tests description for aks/p0
+
+## `p0_importing_test.go`
+
+- **Describe:** P0Importing
+    - **It:** should successfully import the cluster & add, delete, scale nodepool
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
+      -  **By:** scaling up the nodepool
+      -  **By:** scaling down the nodepool
+      -  **By:** adding a nodepool/s
+      -  **By:** deleting the nodepool
+  - **Context:** Upgrading K8s version
+    - **It:** should be able to upgrade k8s version of the cluster
+      -  **By:** upgrading the ControlPlane
+      -  **By:** upgrading the NodePools
+
+## `p0_provisioning_test.go`
+
+- **Describe:** P0Provisioning
+    - **It:** should successfully provision the cluster
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
+  - **Context:** Upgrading K8s version
+    - **It:** should be able to upgrade k8s version of the cluster
+      -  **By:** upgrading the ControlPlane
+      -  **By:** upgrading the NodePools
+    - **It:** should be possible to add or delete the nodepools
+      -  **By:** adding a nodepool
+      -  **By:** deleting the nodepool
+    - **It:** should be possible to scale up/down the nodepool
+      -  **By:** scaling up the nodepool
+      -  **By:** scaling down the nodepool
+
+# Tests description for aks/support_matrix
+
+## `support_matrix_importing_test.go`
+
+- **Describe:** SupportMatrixImporting
+    - **It:** should successfully import the cluster
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
+
+## `support_matrix_provisioning_test.go`
+
+- **Describe:** SupportMatrixProvisioning
+    - **It:** should successfully provision the cluster
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
+
+# Tests description for eks/p0
+
+## `p0_importing_test.go`
+
+- **Describe:** P0Importing
+    - **It:** should successfully import the cluster
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
+  - **Context:** Upgrading K8s version
+    - **It:** should be able to upgrade k8s version of the cluster
+      -  **By:** upgrading the ControlPlane
+      -  **By:** upgrading the NodeGroups
+    - **It:** should be possible to add or delete the NodeGroups
+      -  **By:** adding a NodeGroup/s
+      -  **By:** deleting the NodeGroup
+    - **It:** should be possible to scale up/down the NodeGroup
+      -  **By:** scaling up the NodeGroup
+      -  **By:** scaling down the NodeGroup
+
+## `p0_provisioning_test.go`
+
+- **Describe:** P0Provisioning
+    - **It:** should successfully provision the cluster
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
+  - **Context:** Upgrading K8s version
+    - **It:** should be able to upgrade k8s version of the cluster
+      -  **By:** upgrading the ControlPlane
+      -  **By:** upgrading the NodeGroups
+    - **It:** should be possible to add or delete the NodeGroups
+      -  **By:** adding a NodeGroup
+      -  **By:** deleting the NodeGroup
+    - **It:** should be possible to scale up/down the NodeGroup
+      -  **By:** scaling up the NodeGroup
+      -  **By:** scaling down the NodeGroup
+
+# Tests description for eks/support_matrix
+
+## `support_matrix_importing_test.go`
+
+- **Describe:** SupportMatrixImporting
+    - **It:** should successfully import the cluster
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
+
+## `support_matrix_provisioning_test.go`
+
+- **Describe:** SupportMatrixProvisioning
+    - **It:** should successfully provision the cluster
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
+
+# Tests description for gke/p0
+
+## `p0_importing_test.go`
+
+- **Describe:** P0Importing
+    - **It:** should successfully import the cluster
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
+  - **Context:** Upgrading K8s version
+    - **It:** should be able to upgrade k8s version of the cluster
+      -  **By:** upgrading the Controlplane & NodePools
+    - **It:** should be possible to add or delete the nodepools
+      -  **By:** adding a nodepool
+      -  **By:** deleting the nodepool
+    - **It:** should be possible to scale up/down the nodepool
+      -  **By:** scaling up the nodepool
+      -  **By:** scaling down the nodepool
+
+## `p0_provisioning_test.go`
+
+- **Describe:** P0Provisioning
+    - **It:** should successfully provision the cluster
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
+  - **Context:** Upgrading K8s version
+    - **It:** should be able to upgrade k8s version of the cluster
+      -  **By:** upgrading the ControlPlane
+      -  **By:** upgrading the NodePools
+    - **It:** should be possible to add or delete the nodepools
+      -  **By:** adding a nodepool
+      -  **By:** deleting the nodepool
+    - **It:** should be possible to scale up/down the nodepool
+      -  **By:** scaling up the nodepool
+      -  **By:** scaling down the nodepool
+
+# Tests description for gke/support_matrix
+
+## `support_matrix_importing_test.go`
+
+- **Describe:** SupportMatrixImporting
+    - **It:** should successfully import the cluster
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
+
+## `support_matrix_provisioning_test.go`
+
+- **Describe:** SupportMatrixProvisioning
+    - **It:** should successfully provision the cluster
+      -  **By:** checking cluster name is same
+      -  **By:** checking service account token secret
+      -  **By:** checking all management nodes are ready
+      -  **By:** checking all pods are ready
