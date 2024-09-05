@@ -1,0 +1,338 @@
+# This workflow is a reusable one called by other workflows
+name: (Template) E2E Tests workflow
+on:
+  workflow_call:
+  # Variables to set when calling this reusable workflow
+    inputs:
+      hosted_provider:
+        description: Provider to run tests(eks/aks/gke)
+        required: true
+        type: string
+      rancher_version:
+        description: Rancher version to deploy
+        required: true
+        type: string
+      k3s_version:
+        description: k3s version of local cluster
+        required: true
+        type: string
+      operator_nightly_chart:
+        description: Install hosted-provider nightly chart
+        required: false
+        type: boolean
+      install_rancher:
+        description: Whether Rancher should be installed during setup or if the tests will install it, in case of Chart Support or Upgrade tests.
+        default: true
+        type: boolean
+      rancher_installed:
+        description: Rancher details if already installed
+        type: string
+      run_p0_provisioning_tests:
+        type: boolean
+      run_p0_importing_tests:
+        type: boolean
+      run_support_matrix_provisioning_tests:
+        type: boolean
+      run_support_matrix_importing_tests:
+        type: boolean
+      run_k8s_chart_support_provisioning_tests:
+        type: boolean
+      run_k8s_chart_support_importing_tests:
+        type: boolean
+      destroy_runner:
+        description: Destroy the auto-generated self-hosted runner
+        type: boolean
+        required: true
+      runner_template:
+        description: Runner template to use
+        required: true
+        type: string
+      downstream_k8s_version:
+        description: Downstream cluster K8s version to test
+        type: string
+      downstream_cluster_cleanup:
+        description: Cleanup downstream clusters after test
+        type: boolean
+      k8s_upgrade_minor_version:
+        description: Downstream cluster K8s (minor) version to test
+        type: string
+      rancher_upgrade_version:
+        description: Rancher version to upgrade for test (This can be devel/2.x to use 2.x-head. For released versions; simply use 2.x.y)
+        type: string
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  EKS_REGION: ${{ secrets.EKS_REGION }}
+  GCP_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+  AKS_CLIENT_ID: ${{ secrets.AKS_CLIENT_ID }}
+  AKS_CLIENT_SECRET: ${{ secrets.AKS_CLIENT_SECRET }}
+  AKS_SUBSCRIPTION_ID: ${{ secrets.AKS_SUBSCRIPTION_ID }}
+  AKS_TENANT_ID: ${{ secrets.AKS_TENANT_ID }}
+  GKE_PROJECT_ID: ${{ secrets.GKE_PROJECT_ID }}
+  PROVIDER: ${{ inputs.hosted_provider }}
+  RANCHER_PASSWORD: ${{ secrets.RANCHER_PASSWORD }}
+  QASE_API_TOKEN: ${{ secrets.QASE_API_TOKEN }}
+  QASE_PROJECT_CODE: HIGHLANDER
+  QASE_REPORT: 1
+  QASE_RUN_COMPLETE: 1
+  RANCHER_LOG_COLLECTOR: ${{ github.workspace }}/.github/scripts/collect-rancher-logs.sh
+  GCP_RUNNER_ZONE: asia-south2-c
+  DOWNSTREAM_KUBERNETES_VERSION: ${{ inputs.downstream_k8s_version }}
+  DOWNSTREAM_CLUSTER_CLEANUP: ${{ inputs.downstream_cluster_cleanup }}
+  QASE_HELPER: ${{ github.workspace }}/hosted/helpers/qase/helper_qase.go
+  RANCHER_VERSION: ${{ inputs.rancher_version }}
+  RANCHER_UPGRADE_VERSION: ${{ inputs.rancher_upgrade_version }}
+  K8S_UPGRADE_MINOR_VERSION: ${{ inputs.k8s_upgrade_minor_version }}
+jobs:
+  create-runner:
+    runs-on: ubuntu-latest
+    outputs:
+      uuid: ${{ steps.generator.outputs.uuid }}
+      runner: ${{ steps.generator.outputs.runner }}
+    steps:
+      # actions/checkout MUST come before auth
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Generate UUID and Runner hostname
+        id: generator
+        run: |
+          UUID=$(uuidgen)
+          GH_REPO_FULL=${{ github.repository }}
+          GH_REPO=${GH_REPO_FULL#*/}
+          echo "uuid=${UUID//-}" >> ${GITHUB_OUTPUT}
+          echo "runner=${GH_REPO//\//-}-ci-${UUID//-}" >> ${GITHUB_OUTPUT}
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Create runner
+        run: |
+          REGION=$(echo ${{ env.GCP_RUNNER_ZONE }} | sed 's/-[abcdef]$//')
+          gcloud compute instances create ${{ steps.generator.outputs.runner }} \
+            --zone ${{ env.GCP_RUNNER_ZONE }} \
+            --source-instance-template projects/${{ env.GKE_PROJECT_ID }}/regions/${REGION}/instanceTemplates/${{ inputs.runner_template }}
+      - name: Allow traffic
+        run: |
+          gcloud compute instances add-tags ${{ steps.generator.outputs.runner }} \
+            --tags http-server,https-server --zone ${{ env.GCP_RUNNER_ZONE }}
+      - name: Create GCP secrets
+        run: |
+          echo -n ${{ secrets.PAT_TOKEN }} \
+            | gcloud secrets create PAT_TOKEN_${{ steps.generator.outputs.uuid }} --data-file=-
+          echo -n ${{ github.repository }} \
+            | gcloud secrets create GH_REPO_${{ steps.generator.outputs.uuid }} --data-file=-
+
+  installation-and-e2e-tests:
+    runs-on: ${{ needs.create-runner.outputs.uuid }}
+    needs: create-runner
+    outputs:
+      PUBLIC_IP: ${{ steps.runner-ip.outputs.PUBLIC_IP }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get Runner IP
+        id: runner-ip
+        run: echo "PUBLIC_IP=$(curl -s ifconfig.co)" >> "$GITHUB_OUTPUT"
+
+      - name: Set Rancher hostname / password
+        run: |
+          if [ ${{ inputs.rancher_installed }} != 'hostname/password' ]; then
+            echo RANCHER_HOSTNAME="$(echo ${{ inputs.rancher_installed }} | cut -d'/' -f1)" >> ${GITHUB_ENV}
+            echo RANCHER_PASSWORD="$(echo ${{ inputs.rancher_installed }} | cut -d'/' -f2)" >> ${GITHUB_ENV}
+          else
+            echo RANCHER_HOSTNAME=${{ steps.runner-ip.outputs.PUBLIC_IP }}.sslip.io >> $GITHUB_ENV
+            echo RANCHER_PASSWORD=${{ secrets.RANCHER_PASSWORD }} >> $GITHUB_ENV
+          fi
+
+      - name: Install K3s / Helm / Rancher
+        if: ${{ inputs.rancher_installed == 'hostname/password' }}
+        env:
+          KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+          HELM_VERSION: 3.13.1
+          K3S_VERSION: ${{ inputs.k3s_version }}
+          RANCHER_VERSION: ${{ inputs.rancher_version }}
+          RANCHER_HOSTNAME: ${{ env.RANCHER_HOSTNAME }}
+          RANCHER_PASSWORD: ${{ env.RANCHER_PASSWORD }}
+        run: |
+          make prepare-e2e-ci-k3s
+          if [ ${{ inputs.install_rancher }} ]; then
+            if [ ${{ inputs.operator_nightly_chart }} == true ]; then
+              make install-rancher-hosted-nightly-chart
+            else
+              make install-rancher
+            fi
+          fi
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Install Azure cli
+        run: |
+          sudo zypper clean --all
+          sudo zypper install -y azure-cli
+          pip install azure-cli
+            
+      - name: Login to Azure
+        uses: azure/login@v1.6.1
+        with:
+          creds: '{"clientId":"${{ env.AKS_CLIENT_ID }}","clientSecret":"${{ env.AKS_CLIENT_SECRET }}","subscriptionId":"${{ env.AKS_SUBSCRIPTION_ID }}","tenantId":"${{ env.AKS_TENANT_ID }}"}'
+
+      - name: Install EKSCTL
+        run: |
+          # Better to always use the latest eksctl binary to avoid API version issue
+          EKSCTL_GH=https://github.com/weaveworks/eksctl/releases/latest/download
+          curl --location ${EKSCTL_GH}/eksctl_$(uname -s)_amd64.tar.gz | tar xz -C .
+          chmod +x eksctl
+          sudo mv eksctl /usr/local/bin
+            
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.EKS_REGION }}
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Create/Export Qase Run
+        id: qase
+        run: |
+          # Define and export URL of GH test run in Qase run description
+          GH_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          export QASE_RUN_DESCRIPTION="${GH_RUN_URL}"
+          export QASE_RUN_NAME="${{ env.PROVIDER }}-p0-${{ inputs.rancher_version }}"
+    
+          # Create a Qase run, get its ID
+          ID=$(go run ${{ env.QASE_HELPER }} -create)
+          # Export outputs for future use
+          echo "qase_run_id=${ID}" >> ${GITHUB_OUTPUT}
+
+          # Just an info for debugging purposes
+          echo -e "Exported values:\nQASE_RUN_ID=${ID}\nQASE_RUN_DESCRIPTION=${QASE_RUN_DESCRIPTION}\nQASE_RUN_NAME=${QASE_RUN_NAME}"
+
+      - name: Provisioning cluster tests
+        if:  ${{ inputs.run_p0_provisioning_tests == true }}
+        env:
+          RANCHER_HOSTNAME: ${{ env.RANCHER_HOSTNAME }}
+          RANCHER_PASSWORD: ${{ env.RANCHER_PASSWORD }}
+          CATTLE_TEST_CONFIG: ${{ github.workspace }}/cattle-config-provisioning.yaml
+          QASE_RUN_ID: ${{ steps.qase.outputs.qase_run_id }}
+        run: |
+          make e2e-provisioning-tests
+
+      - name: Importing cluster tests
+        if: ${{ !cancelled() && inputs.run_p0_importing_tests == true }}
+        env:
+          RANCHER_HOSTNAME: ${{ env.RANCHER_HOSTNAME }}
+          RANCHER_PASSWORD: ${{ env.RANCHER_PASSWORD }}
+          CATTLE_TEST_CONFIG: ${{ github.workspace }}/cattle-config-import.yaml
+          QASE_RUN_ID: ${{ steps.qase.outputs.qase_run_id }}
+        run: |
+          make e2e-import-tests
+
+      - name: Support matrix provisioning tests
+        if: ${{ !cancelled() && inputs.run_support_matrix_provisioning_tests == true }}
+        env:
+          RANCHER_HOSTNAME: ${{ env.RANCHER_HOSTNAME }}
+          RANCHER_PASSWORD: ${{ env.RANCHER_PASSWORD }}
+          CATTLE_TEST_CONFIG: ${{ github.workspace }}/cattle-config-provisioning.yaml
+          QASE_RUN_ID: ${{ steps.qase.outputs.qase_run_id }}
+        run: |
+          make e2e-support-matrix-provisioning-tests
+
+      - name: Support matrix importing tests
+        if: ${{ !cancelled() && inputs.run_support_matrix_importing_tests == true }}
+        env:
+          RANCHER_HOSTNAME: ${{ env.RANCHER_HOSTNAME }}
+          RANCHER_PASSWORD: ${{ env.RANCHER_PASSWORD }}
+          CATTLE_TEST_CONFIG: ${{ github.workspace }}/cattle-config-import.yaml
+          QASE_RUN_ID: ${{ steps.qase.outputs.qase_run_id }}
+        run: |
+          make e2e-support-matrix-importing-tests
+      - name: K8s Chart Support Provisioning tests
+        if:  ${{ inputs.run_k8s_chart_support_provisioning_tests == true }}
+        env:
+          RANCHER_HOSTNAME: ${{ steps.runner-ip.outputs.PUBLIC_IP}}.sslip.io
+          CATTLE_TEST_CONFIG: ${{ github.workspace }}/cattle-config-provisioning.yaml
+          KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+        run: |
+          make e2e-k8s-chart-support-provisioning-tests
+
+      - name: K8s Chart Support Importing tests
+        if: ${{ inputs.run_k8s_chart_support_provisioning_tests == true }}
+        env:
+          RANCHER_HOSTNAME: ${{ steps.runner-ip.outputs.PUBLIC_IP}}.sslip.io
+          CATTLE_TEST_CONFIG: ${{ github.workspace }}/cattle-config-provisioning.yaml
+          KUBECONFIG: /etc/rancher/k3s/k3s.yaml
+        run: |
+          make e2e-k8s-chart-support-importing-tests
+
+      - name: Finalize Qase Run and publish Results
+        env:
+          QASE_RUN_ID: ${{ steps.qase.outputs.qase_run_id }}
+        if: ${{ !cancelled() }}
+        run: |
+          REPORT=$(go run ${{ env.QASE_HELPER }} -publish)
+          echo "${REPORT}"
+  
+      - name: Delete Qase Run if job has been cancelled
+        env:
+          QASE_RUN_ID: ${{ steps.qase.outputs.qase_run_id }}
+        if: ${{ cancelled() }}
+        run: go run ${{ env.QASE_HELPER }} -delete
+
+      - name: Collect logs
+        if: ${{ !cancelled() }}
+        run: |
+          chmod +x ${{ env.RANCHER_LOG_COLLECTOR }}
+          bash ${{ env.RANCHER_LOG_COLLECTOR }}
+
+      - name: Upload cluster logs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: support-logs
+          path: ${{ github.workspace }}/logs/*
+          if-no-files-found: ignore
+
+      - name: Add summary
+        if: ${{ !cancelled() }}
+        run: |
+          # Add summary
+          echo "## General information" >> ${GITHUB_STEP_SUMMARY}
+          echo "Rancher Manager Version: ${{ inputs.rancher_version }}" >> ${GITHUB_STEP_SUMMARY}
+          echo "K3s on Rancher Manager: ${{ inputs.k3s_version }}" >> ${GITHUB_STEP_SUMMARY}
+          echo "Downstream ${{ inputs.hosted_provider }} version: ${{ inputs.downstream_k8s_version }}" >> ${GITHUB_STEP_SUMMARY}
+
+  delete-runner:
+    if: ${{ always() && inputs.destroy_runner == true }}
+    needs: [create-runner, installation-and-e2e-tests]
+    runs-on: ubuntu-latest
+    steps:
+      # actions/checkout MUST come before auth
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+      - name: Delete PAT token secret
+        run: |
+          gcloud --quiet secrets delete PAT_TOKEN_${{ needs.create-runner.outputs.uuid }}
+      - name: Delete runner
+        run: |
+          gcloud --quiet compute instances delete ${{ needs.create-runner.outputs.runner }} \
+            --delete-disks all \
+            --zone ${{ env.GCP_RUNNER_ZONE }}
