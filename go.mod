@@ -13,7 +13,7 @@ require (
 	github.com/rancher-sandbox/qase-ginkgo v1.0.1
 	github.com/rancher/shepherd v0.0.0-20240603173138-6d1ffee9eb86 // rancher/shepherd HEAD commit
 	github.com/sirupsen/logrus v1.9.3
-	k8s.io/apimachinery v0.29.4
+	k8s.io/apimachinery v0.29.8
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 )
 
