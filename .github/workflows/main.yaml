@@ -176,7 +176,7 @@ jobs:
           fi
             
       - name: Login to Azure
-        uses: azure/login@v2.1.1
+        uses: azure/login@v2.2.0
         with:
           creds: '{"clientId":"${{ env.AKS_CLIENT_ID }}","clientSecret":"${{ env.AKS_CLIENT_SECRET }}","subscriptionId":"${{ env.AKS_SUBSCRIPTION_ID }}","tenantId":"${{ env.AKS_TENANT_ID }}"}'
 
